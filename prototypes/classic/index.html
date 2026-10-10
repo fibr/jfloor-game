@@ -1,0 +1,990 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JFloorGame: Classic Arcade Flappy Prototype</title>
+<base target="_blank">
+<style>
+:root {
+  color-scheme: light dark;
+  --bg-page: #0f172a;
+  --fg-page: #f8fafc;
+  --panel-bg: #1e293b;
+  --panel-border: #334155;
+  --accent: #38bdf8;
+  --accent-glow: rgba(56, 189, 248, 0.4);
+  --danger: #ef4444;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --text-muted: #94a3b8;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg-page);
+  color: var(--fg-page);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  padding: 16px;
+  overflow-x: hidden;
+}
+header {
+  text-align: center;
+  margin-bottom: 12px;
+  max-width: 800px;
+}
+header h1 {
+  font-size: 1.6rem;
+  letter-spacing: -0.02em;
+  color: #38bdf8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+header p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+.game-layout {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+  max-width: 960px;
+  width: 100%;
+}
+.canvas-container {
+  position: relative;
+  width: 400px;
+  height: 600px;
+  background: #090d16;
+  border: 2px solid #38bdf8;
+  border-radius: 12px;
+  box-shadow: 0 0 24px rgba(56, 189, 248, 0.25), 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  user-select: none;
+  touch-action: manipulation;
+}
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+.tuning-panel {
+  flex: 1 1 340px;
+  max-width: 420px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.tuning-panel h2 {
+  font-size: 1.1rem;
+  color: #38bdf8;
+  border-bottom: 1px solid var(--panel-border);
+  padding-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.badge {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+}
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.control-group label {
+  font-size: 0.8rem;
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-muted);
+}
+.control-group label span {
+  color: #f8fafc;
+  font-family: monospace;
+  font-weight: bold;
+}
+input[type="range"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  padding: 4px 0;
+}
+.toggle-row input {
+  cursor: pointer;
+  transform: scale(1.15);
+}
+.btn-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+button {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  background: #334155;
+  color: #f8fafc;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+button:hover {
+  background: #475569;
+}
+button.primary {
+  background: #0284c7;
+  border-color: #0ea5e9;
+}
+button.primary:hover {
+  background: #0369a1;
+}
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  background: #0f172a;
+  border-radius: 8px;
+  padding: 10px;
+  border: 1px solid var(--panel-border);
+  margin-top: 4px;
+}
+.stat-box {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.stat-box strong {
+  font-size: 0.95rem;
+  font-family: monospace;
+  color: #38bdf8;
+}
+.key-hints {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: center;
+  border-top: 1px solid var(--panel-border);
+  padding-top: 8px;
+}
+kbd {
+  background: #334155;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #f8fafc;
+  font-family: monospace;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span>⚡</span> JFloorGame: Classic Arcade Flappy</h1>
+  <p>Silicon Graveyard Obstacle Run &bull; 60 FPS Fixed Kinematics &bull; Forgiving Hitbox Envelope</p>
+</header>
+
+<div class="game-layout">
+  <div class="canvas-container" id="game-container">
+    <canvas id="gameCanvas" width="400" height="600"></canvas>
+  </div>
+
+  <div class="tuning-panel">
+    <h2>
+      <span>🛠️ Kinematic Tuning Panel</span>
+      <span class="badge" id="fps-badge">60 FPS</span>
+    </h2>
+
+    <div class="control-group">
+      <label>Gravity: <span id="val-gravity">1400 px/s²</span></label>
+      <input type="range" id="param-gravity" min="800" max="2200" step="50" value="1400">
+    </div>
+
+    <div class="control-group">
+      <label>Flap Impulse: <span id="val-jump">420 px/s</span></label>
+      <input type="range" id="param-jump" min="250" max="600" step="10" value="420">
+    </div>
+
+    <div class="control-group">
+      <label>Obstacle Gap: <span id="val-gap">150 px</span></label>
+      <input type="range" id="param-gap" min="110" max="220" step="5" value="150">
+    </div>
+
+    <div class="control-group">
+      <label>Scroll Speed: <span id="val-speed">180 px/s</span></label>
+      <input type="range" id="param-speed" min="120" max="300" step="10" value="180">
+    </div>
+
+    <div class="toggle-row">
+      <label for="toggle-hitbox">Show Hitboxes &amp; Near-Miss Radar</label>
+      <input type="checkbox" id="toggle-hitbox">
+    </div>
+
+    <div class="toggle-row">
+      <label for="toggle-audio">8-Bit Sound FX (ZzFX)</label>
+      <input type="checkbox" id="toggle-audio" checked>
+    </div>
+
+    <div class="btn-row">
+      <button id="btn-reset-params">Reset Presets</button>
+      <button class="primary" id="btn-restart-game">Restart Run (R)</button>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-box">
+        <span>Current Score</span>
+        <strong id="stat-score">0 PRs</strong>
+      </div>
+      <div class="stat-box">
+        <span>High Score</span>
+        <strong id="stat-high">0 PRs</strong>
+      </div>
+      <div class="stat-box">
+        <span>Near-Miss Graze</span>
+        <strong id="stat-near">0 (+0 pts)</strong>
+      </div>
+      <div class="stat-box">
+        <span>Velocity Vy</span>
+        <strong id="stat-vy">0 px/s</strong>
+      </div>
+    </div>
+
+    <div class="key-hints">
+      Controls: <kbd>Space</kbd> or <kbd>Click/Tap</kbd> to Flap &bull; <kbd>P</kbd> Pause &bull; <kbd>R</kbd> Restart
+    </div>
+  </div>
+</div>
+
+<!-- Load modular assets: ZzFX audio engine & SVG pixel sprites -->
+<script src="assets.js"></script>
+
+<script>
+/**
+ * JFloorGame: Classic Arcade Flappy Engine
+ * Fixed-Timestep 60 FPS Euler Integration, 65% Inner Capsule Hitbox, Near-Miss Radar, ZzFX Audio
+ */
+(function() {
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const WIDTH = canvas.width;
+  const HEIGHT = canvas.height;
+  const FLOOR_Y = 550;
+
+  // Audio helper
+  const audio = (window.JFloorAssets && window.JFloorAssets.audio) ? window.JFloorAssets.audio : {
+    playJump: () => {}, playScore: () => {}, playNearMiss: () => {},
+    playCoffee: () => {}, playDuck: () => {}, playCrash: () => {}, playSpark: () => {},
+    setMuted: () => {}, isMuted: () => false
+  };
+
+  const getSprite = (window.JFloorAssets && window.JFloorAssets.getSpriteImage) ?
+    window.JFloorAssets.getSpriteImage : () => null;
+
+  // Calibrated Kinematics Presets
+  const DEFAULT_PARAMS = {
+    gravity: 1400,
+    jumpImpulse: 420,
+    gapSize: 150,
+    baseScrollSpeed: 180,
+    terminalVelocity: 650
+  };
+
+  const params = { ...DEFAULT_PARAMS };
+
+  // Game States
+  const STATE = { READY: 0, PLAYING: 1, GAMEOVER: 2, PAUSED: 3 };
+  let currentState = STATE.READY;
+
+  // Telemetry & Score
+  let score = 0;
+  let highScore = 0;
+  let nearMissCount = 0;
+  let nearMissBonusPts = 0;
+  let comboStreak = 1;
+
+  // Player Entity
+  const player = {
+    x: 100,
+    y: HEIGHT / 2,
+    vy: 0,
+    rotation: 0,
+    width: 44,
+    height: 44,
+    hitboxWidth: 28,  // 65% area forgiving envelope
+    hitboxHeight: 28,
+    radarWidth: 52,
+    radarHeight: 52,
+    hasShield: false,
+    shieldTimer: 0,
+    coffeeBoost: 0,
+    invincibleTimer: 0,
+    reset() {
+      this.x = 100;
+      this.y = HEIGHT / 2 - 20;
+      this.vy = 0;
+      this.rotation = 0;
+      this.hasShield = false;
+      this.shieldTimer = 0;
+      this.coffeeBoost = 0;
+      this.invincibleTimer = 0;
+    }
+  };
+
+  // Obstacles & Pickups
+  let obstacles = [];
+  let pickups = [];
+  let particles = [];
+  let obstacleTimer = 0;
+  let currentScrollSpeed = params.baseScrollSpeed;
+
+  // UI Elements
+  const elGravity = document.getElementById('param-gravity');
+  const elJump = document.getElementById('param-jump');
+  const elGap = document.getElementById('param-gap');
+  const elSpeed = document.getElementById('param-speed');
+  const elValGravity = document.getElementById('val-gravity');
+  const elValJump = document.getElementById('val-jump');
+  const elValGap = document.getElementById('val-gap');
+  const elValSpeed = document.getElementById('val-speed');
+  const elToggleHitbox = document.getElementById('toggle-hitbox');
+  const elToggleAudio = document.getElementById('toggle-audio');
+  const elStatScore = document.getElementById('stat-score');
+  const elStatHigh = document.getElementById('stat-high');
+  const elStatNear = document.getElementById('stat-near');
+  const elStatVy = document.getElementById('stat-vy');
+  const elFpsBadge = document.getElementById('fps-badge');
+  const btnResetParams = document.getElementById('btn-reset-params');
+  const btnRestartGame = document.getElementById('btn-restart-game');
+
+  function updateTuningUI() {
+    params.gravity = parseFloat(elGravity.value);
+    params.jumpImpulse = parseFloat(elJump.value);
+    params.gapSize = parseFloat(elGap.value);
+    params.baseScrollSpeed = parseFloat(elSpeed.value);
+
+    elValGravity.textContent = `${params.gravity} px/s²`;
+    elValJump.textContent = `${params.jumpImpulse} px/s`;
+    elValGap.textContent = `${params.gapSize} px`;
+    elValSpeed.textContent = `${params.baseScrollSpeed} px/s`;
+  }
+
+  elGravity.addEventListener('input', updateTuningUI);
+  elJump.addEventListener('input', updateTuningUI);
+  elGap.addEventListener('input', updateTuningUI);
+  elSpeed.addEventListener('input', updateTuningUI);
+
+  elToggleAudio.addEventListener('change', (e) => {
+    audio.setMuted(!e.target.checked);
+  });
+
+  btnResetParams.addEventListener('click', () => {
+    elGravity.value = DEFAULT_PARAMS.gravity;
+    elJump.value = DEFAULT_PARAMS.jumpImpulse;
+    elGap.value = DEFAULT_PARAMS.gapSize;
+    elSpeed.value = DEFAULT_PARAMS.baseScrollSpeed;
+    updateTuningUI();
+  });
+
+  btnRestartGame.addEventListener('click', () => {
+    restartGame();
+  });
+
+  // Controls
+  function flap() {
+    if (currentState === STATE.READY) {
+      currentState = STATE.PLAYING;
+      player.vy = -params.jumpImpulse;
+      audio.playJump();
+      spawnJetParticles(player.x, player.y + 16);
+      return;
+    }
+    if (currentState === STATE.GAMEOVER) {
+      restartGame();
+      return;
+    }
+    if (currentState === STATE.PLAYING) {
+      player.vy = -params.jumpImpulse;
+      audio.playJump();
+      spawnJetParticles(player.x, player.y + 16);
+    }
+  }
+
+  function togglePause() {
+    if (currentState === STATE.PLAYING) {
+      currentState = STATE.PAUSED;
+    } else if (currentState === STATE.PAUSED) {
+      currentState = STATE.PLAYING;
+    }
+  }
+
+  function restartGame() {
+    player.reset();
+    obstacles = [];
+    pickups = [];
+    particles = [];
+    obstacleTimer = 0;
+    score = 0;
+    nearMissCount = 0;
+    nearMissBonusPts = 0;
+    comboStreak = 1;
+    currentScrollSpeed = params.baseScrollSpeed;
+    currentState = STATE.READY;
+    updateStatsDisplay();
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') {
+      e.preventDefault();
+      flap();
+    } else if (e.code === 'KeyP') {
+      e.preventDefault();
+      togglePause();
+    } else if (e.code === 'KeyR') {
+      e.preventDefault();
+      restartGame();
+    }
+  });
+
+  canvas.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    flap();
+  });
+
+  // Particle Effects
+  function spawnJetParticles(x, y) {
+    for (let i = 0; i < 5; i++) {
+      particles.push({
+        x: x - 10 + (Math.random() * 8),
+        y: y + (Math.random() * 4),
+        vx: -60 - Math.random() * 40,
+        vy: 20 + Math.random() * 40,
+        color: Math.random() > 0.5 ? '#38bdf8' : '#60a5fa',
+        size: 3 + Math.random() * 3,
+        life: 0.25
+      });
+    }
+  }
+
+  function spawnSparkParticles(x, y) {
+    for (let i = 0; i < 8; i++) {
+      particles.push({
+        x: x,
+        y: y,
+        vx: (Math.random() - 0.5) * 160,
+        vy: Math.random() * 80 + 20,
+        color: Math.random() > 0.5 ? '#facc15' : '#ef4444',
+        size: 2 + Math.random() * 3,
+        life: 0.35
+      });
+    }
+  }
+
+  function spawnNearMissSparks(x, y) {
+    for (let i = 0; i < 12; i++) {
+      particles.push({
+        x: x,
+        y: y,
+        vx: (Math.random() - 0.5) * 180,
+        vy: (Math.random() - 0.5) * 180,
+        color: '#38bdf8',
+        size: 3,
+        life: 0.4
+      });
+    }
+  }
+
+  // Obstacle Spawner
+  function spawnObstacle() {
+    const minTop = 60;
+    const maxTop = FLOOR_Y - params.gapSize - 60;
+    const topHeight = minTop + Math.random() * (maxTop - minTop);
+    const bottomY = topHeight + params.gapSize;
+    const obsWidth = 64;
+
+    const useServerTop = Math.random() > 0.5;
+    const useKernelBottom = Math.random() > 0.5;
+
+    obstacles.push({
+      x: WIDTH + 10,
+      width: obsWidth,
+      topHeight: topHeight,
+      bottomY: bottomY,
+      bottomHeight: FLOOR_Y - bottomY,
+      passed: false,
+      grazed: false,
+      topSprite: useServerTop ? 'obs_server_top' : 'obs_crt_kernel',
+      bottomSprite: useKernelBottom ? 'obs_crt_kernel' : 'obs_crt_bsod'
+    });
+
+    // Pickups spawner (25% chance)
+    if (Math.random() < 0.28) {
+      const pickupType = Math.random() < 0.45 ? 'coffee' : (Math.random() < 0.8 ? 'duck' : 'commit');
+      pickups.push({
+        x: WIDTH + 10 + obsWidth / 2 - 16,
+        y: topHeight + params.gapSize / 2 - 16,
+        width: 32,
+        height: 32,
+        type: pickupType,
+        collected: false
+      });
+    }
+  }
+
+  // Collision Logic with 8px corner chamfering & 65% area inner hull
+  function checkCollision(px, py, pw, ph, rx, ry, rw, rh) {
+    const pLeft = px - pw / 2;
+    const pRight = px + pw / 2;
+    const pTop = py - ph / 2;
+    const pBottom = py + ph / 2;
+
+    const rLeft = rx;
+    const rRight = rx + rw;
+    const rTop = ry;
+    const rBottom = ry + rh;
+
+    // AABB test
+    if (pRight < rLeft || pLeft > rRight || pBottom < rTop || pTop > rBottom) {
+      return false;
+    }
+
+    // 8px Corner chamfer avoidance check
+    const chamfer = 8;
+    // Top-left corner
+    if (pRight < rLeft + chamfer && pBottom < rTop + chamfer) {
+      if ((pRight - rLeft) + (pBottom - rTop) < chamfer) return false;
+    }
+    // Top-right corner
+    if (pLeft > rRight - chamfer && pBottom < rTop + chamfer) {
+      if ((rRight - pLeft) + (pBottom - rTop) < chamfer) return false;
+    }
+    // Bottom-left corner
+    if (pRight < rLeft + chamfer && pTop > rBottom - chamfer) {
+      if ((pRight - rLeft) + (rBottom - pTop) < chamfer) return false;
+    }
+    // Bottom-right corner
+    if (pLeft > rRight - chamfer && pTop > rBottom - chamfer) {
+      if ((rRight - pLeft) + (rBottom - pTop) < chamfer) return false;
+    }
+
+    return true;
+  }
+
+  function updateStatsDisplay() {
+    elStatScore.textContent = `${score} PRs`;
+    if (score > highScore) highScore = score;
+    elStatHigh.textContent = `${highScore} PRs`;
+    elStatNear.textContent = `${nearMissCount} (+${nearMissBonusPts} pts)`;
+    elStatVy.textContent = `${Math.round(player.vy)} px/s`;
+  }
+
+  // Fixed 60 FPS update tick
+  function update(dt) {
+    if (currentState !== STATE.PLAYING) return;
+
+    // Handle boost timers
+    if (player.coffeeBoost > 0) {
+      player.coffeeBoost -= dt;
+      currentScrollSpeed = params.baseScrollSpeed * 1.3;
+    } else {
+      currentScrollSpeed = params.baseScrollSpeed + Math.min(80, score * 2.5);
+    }
+
+    if (player.invincibleTimer > 0) {
+      player.invincibleTimer -= dt;
+    }
+
+    // Euler Kinematic Integration
+    player.vy += params.gravity * dt;
+    if (player.vy > params.terminalVelocity) {
+      player.vy = params.terminalVelocity;
+    }
+    player.y += player.vy * dt;
+
+    // Dynamic rotation (-20 deg upward flap to +70 deg downward dive)
+    if (player.vy < 0) {
+      player.rotation = -0.35;
+    } else {
+      player.rotation = Math.min(1.2, player.rotation + 2.5 * dt);
+    }
+
+    // Ceiling clamp (electrical spark bounce)
+    if (player.y - player.hitboxHeight / 2 <= 0) {
+      player.y = player.hitboxHeight / 2;
+      player.vy = 60; // Non-lethal electrical downward bounce
+      spawnSparkParticles(player.x, 6);
+      audio.playSpark();
+    }
+
+    // Fatal floor collision ("Production Down")
+    if (player.y + player.hitboxHeight / 2 >= FLOOR_Y) {
+      player.y = FLOOR_Y - player.hitboxHeight / 2;
+      currentState = STATE.GAMEOVER;
+      audio.playCrash();
+      return;
+    }
+
+    // Update Particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.life -= dt;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+
+    // Update Obstacles
+    obstacleTimer += dt;
+    const obstacleInterval = 318 / currentScrollSpeed; // ~1.77s periodicity
+    if (obstacleTimer >= obstacleInterval) {
+      spawnObstacle();
+      obstacleTimer = 0;
+    }
+
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+      const obs = obstacles[i];
+      obs.x -= currentScrollSpeed * dt;
+
+      // Inner Active Hitbox Collision (28x28 forgiving hull)
+      const hitTop = checkCollision(
+        player.x, player.y, player.hitboxWidth, player.hitboxHeight,
+        obs.x, 0, obs.width, obs.topHeight
+      );
+      const hitBottom = checkCollision(
+        player.x, player.y, player.hitboxWidth, player.hitboxHeight,
+        obs.x, obs.bottomY, obs.width, obs.bottomHeight
+      );
+
+      if ((hitTop || hitBottom) && player.invincibleTimer <= 0) {
+        if (player.hasShield) {
+          player.hasShield = false;
+          player.invincibleTimer = 1.2;
+          audio.playDuck();
+          spawnNearMissSparks(player.x, player.y);
+        } else {
+          currentState = STATE.GAMEOVER;
+          audio.playCrash();
+          return;
+        }
+      }
+
+      // Near-Miss Radar Check (52x52 radar envelope)
+      if (!obs.grazed) {
+        const radarTop = checkCollision(
+          player.x, player.y, player.radarWidth, player.radarHeight,
+          obs.x, 0, obs.width, obs.topHeight
+        );
+        const radarBottom = checkCollision(
+          player.x, player.y, player.radarWidth, player.radarHeight,
+          obs.x, obs.bottomY, obs.width, obs.bottomHeight
+        );
+
+        if (radarTop || radarBottom) {
+          obs.grazed = true;
+          nearMissCount++;
+          const bonus = 10 * comboStreak;
+          nearMissBonusPts += bonus;
+          score += 1; // Near-miss awards score increment
+          comboStreak = Math.min(4, comboStreak + 1);
+          audio.playNearMiss();
+          spawnNearMissSparks(player.x + 10, player.y);
+        }
+      }
+
+      // Score clearance
+      if (!obs.passed && obs.x + obs.width < player.x) {
+        obs.passed = true;
+        score++;
+        audio.playScore();
+      }
+
+      // Cull offscreen
+      if (obs.x + obs.width < -20) {
+        obstacles.splice(i, 1);
+      }
+    }
+
+    // Update Pickups
+    for (let i = pickups.length - 1; i >= 0; i--) {
+      const pick = pickups[i];
+      pick.x -= currentScrollSpeed * dt;
+
+      if (!pick.collected && checkCollision(player.x, player.y, 36, 36, pick.x, pick.y, pick.width, pick.height)) {
+        pick.collected = true;
+        if (pick.type === 'coffee') {
+          player.coffeeBoost = 3.0;
+          audio.playCoffee();
+        } else if (pick.type === 'duck') {
+          player.hasShield = true;
+          audio.playDuck();
+        } else if (pick.type === 'commit') {
+          score += 5;
+          audio.playScore();
+        }
+        spawnNearMissSparks(pick.x + 16, pick.y + 16);
+      }
+
+      if (pick.x < -40 || pick.collected) {
+        pickups.splice(i, 1);
+      }
+    }
+
+    updateStatsDisplay();
+  }
+
+  // Draw Game Scene
+  function draw() {
+    ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+    // 1. Subterranean Server Room Background
+    ctx.fillStyle = '#090d16';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+    // Cable Grid Background
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < WIDTH; x += 32) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, FLOOR_Y);
+      ctx.stroke();
+    }
+    for (let y = 0; y < FLOOR_Y; y += 32) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(WIDTH, y);
+      ctx.stroke();
+    }
+
+    // 2. Obstacles
+    obstacles.forEach(obs => {
+      // Top Obstacle
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(obs.x, 0, obs.width, obs.topHeight);
+      const topImg = getSprite(obs.topSprite);
+      if (topImg && topImg.complete) {
+        ctx.drawImage(topImg, obs.x, obs.topHeight - 80, obs.width, 80);
+      }
+
+      // Bottom Obstacle
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(obs.x, obs.bottomY, obs.width, obs.bottomHeight);
+      const btmImg = getSprite(obs.bottomSprite);
+      if (btmImg && btmImg.complete) {
+        ctx.drawImage(btmImg, obs.x, obs.bottomY, obs.width, 80);
+      }
+
+      // Bevel borders
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(obs.x, 0, obs.width, obs.topHeight);
+      ctx.strokeRect(obs.x, obs.bottomY, obs.width, obs.bottomHeight);
+
+      // Hitbox visualizer overlay if toggled
+      if (elToggleHitbox.checked) {
+        ctx.strokeStyle = 'rgba(239, 68, 68, 0.7)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(obs.x, 0, obs.width, obs.topHeight);
+        ctx.strokeRect(obs.x, obs.bottomY, obs.width, obs.bottomHeight);
+      }
+    });
+
+    // 3. Pickups
+    pickups.forEach(pick => {
+      const spr = pick.type === 'coffee' ? 'item_coffee' : (pick.type === 'duck' ? 'item_duck' : 'item_commit');
+      const img = getSprite(spr);
+      if (img && img.complete) {
+        ctx.drawImage(img, pick.x, pick.y, pick.width, pick.height);
+      } else {
+        ctx.fillStyle = pick.type === 'coffee' ? '#78350f' : (pick.type === 'duck' ? '#facc15' : '#f59e0b');
+        ctx.beginPath();
+        ctx.arc(pick.x + 16, pick.y + 16, 12, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+
+    // 4. Ground Hazard Striping & Tiles
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, FLOOR_Y, WIDTH, HEIGHT - FLOOR_Y);
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(0, FLOOR_Y, WIDTH, 6);
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 2;
+    for (let gx = 0; gx < WIDTH; gx += 20) {
+      ctx.beginPath();
+      ctx.moveTo(gx, FLOOR_Y + 6);
+      ctx.lineTo(gx + 12, HEIGHT);
+      ctx.stroke();
+    }
+
+    // 5. Particles
+    particles.forEach(p => {
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // 6. Player Developer
+    ctx.save();
+    ctx.translate(player.x, player.y);
+    ctx.rotate(player.rotation);
+
+    // Shield Aura
+    if (player.hasShield) {
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, 28, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
+      ctx.fill();
+    }
+
+    // Determine Developer Sprite State
+    let devSpriteName = 'dev_idle';
+    if (currentState === STATE.GAMEOVER) {
+      devSpriteName = 'dev_crash';
+    } else if (player.vy < -50) {
+      devSpriteName = 'dev_flap';
+    } else if (player.vy > 120) {
+      devSpriteName = 'dev_dive';
+    }
+
+    const devImg = getSprite(devSpriteName);
+    if (devImg && devImg.complete) {
+      ctx.drawImage(devImg, -player.width / 2, -player.height / 2, player.width, player.height);
+    } else {
+      // Fallback developer shape
+      ctx.fillStyle = '#6366f1';
+      ctx.fillRect(-16, -16, 32, 32);
+    }
+
+    // Hitbox & Radar visualization overlays
+    if (elToggleHitbox.checked) {
+      // Active Inner Hitbox (65% hull)
+      ctx.strokeStyle = '#22c55e';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(-player.hitboxWidth / 2, -player.hitboxHeight / 2, player.hitboxWidth, player.hitboxHeight);
+
+      // Radar Perimeter
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.7)';
+      ctx.setLineDash([3, 3]);
+      ctx.strokeRect(-player.radarWidth / 2, -player.radarHeight / 2, player.radarWidth, player.radarHeight);
+      ctx.setLineDash([]);
+    }
+
+    ctx.restore();
+
+    // 7. Heads-Up Display (HUD)
+    if (currentState === STATE.PLAYING) {
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 28px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${score}`, WIDTH / 2, 50);
+
+      if (comboStreak > 1) {
+        ctx.fillStyle = '#38bdf8';
+        ctx.font = 'bold 14px monospace';
+        ctx.fillText(`${comboStreak}x GRAZE COMBO!`, WIDTH / 2, 75);
+      }
+    } else if (currentState === STATE.READY) {
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      ctx.fillRect(40, 180, WIDTH - 80, 220);
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(40, 180, WIDTH - 80, 220);
+
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = 'bold 22px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('JFloorGame: Classic', WIDTH / 2, 225);
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = '14px system-ui';
+      ctx.fillText('Tap to Flap Through Dead Hardware', WIDTH / 2, 260);
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '13px monospace';
+      ctx.fillText('[ Space / Tap to Start ]', WIDTH / 2, 310);
+      ctx.fillText('P: Pause | R: Reset', WIDTH / 2, 340);
+    } else if (currentState === STATE.GAMEOVER) {
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+      ctx.fillRect(40, 160, WIDTH - 80, 260);
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(40, 160, WIDTH - 80, 260);
+
+      ctx.fillStyle = '#ef4444';
+      ctx.font = 'bold 22px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('PRODUCTION DOWN!', WIDTH / 2, 210);
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = '16px system-ui';
+      ctx.fillText(`PRs Merged: ${score}`, WIDTH / 2, 250);
+      ctx.fillText(`Near-Miss Grazes: ${nearMissCount}`, WIDTH / 2, 280);
+
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = '14px monospace';
+      ctx.fillText('Press [Space] or [R] to Redeploy', WIDTH / 2, 340);
+    } else if (currentState === STATE.PAUSED) {
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = 'bold 28px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('PAUSED', WIDTH / 2, HEIGHT / 2);
+    }
+  }
+
+  // Fixed Timestep 60 FPS Engine Loop
+  let lastTime = performance.now();
+  const fixedDt = 1 / 60;
+  let accumulator = 0;
+
+  function gameLoop(now) {
+    let frameTime = (now - lastTime) / 1000;
+    if (frameTime > 0.1) frameTime = 0.1; // Clamp maximum lag spike
+    lastTime = now;
+    accumulator += frameTime;
+
+    while (accumulator >= fixedDt) {
+      update(fixedDt);
+      accumulator -= fixedDt;
+    }
+
+    draw();
+    requestAnimationFrame(gameLoop);
+  }
+
+  updateTuningUI();
+  updateStatsDisplay();
+  requestAnimationFrame(gameLoop);
+})();
+</script>
+
+</body>
+</html>
