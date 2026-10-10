@@ -1,0 +1,1244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>JFloorGame: Squad Runner Prototype</title>
+<style>
+:root {
+  --bg: #090d16;
+  --panel: #111827;
+  --panel-border: #1f2937;
+  --fg: #f3f4f6;
+  --muted: #9ca3af;
+  --accent: #38bdf8;
+  --accent-fe: #ec4899;
+  --accent-be: #3b82f6;
+  --accent-ops: #eab308;
+  --success: #10b981;
+  --danger: #ef4444;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  padding: 12px;
+  touch-action: manipulation;
+}
+header {
+  width: 100%;
+  max-width: 860px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 4px 8px;
+}
+h1 { font-size: 1.25rem; font-weight: 700; color: #38bdf8; letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px; }
+.badge { font-size: 0.7rem; background: #1e293b; color: #94a3b8; padding: 2px 8px; border-radius: 999px; border: 1px solid #334155; }
+.layout-container {
+  display: flex;
+  gap: 16px;
+  max-width: 860px;
+  width: 100%;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.game-viewport {
+  position: relative;
+  width: 440px;
+  height: 600px;
+  background: #030712;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  border: 2px solid #1f2937;
+}
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.sidebar {
+  flex: 1;
+  min-width: 320px;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.card {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.card-title {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.mode-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  background: #0b0f17;
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid #1f2937;
+}
+.mode-btn {
+  padding: 8px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.mode-btn.active {
+  background: #1f2937;
+  color: #38bdf8;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.roster-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.role-btn {
+  background: #0b0f17;
+  border: 1px solid #1f2937;
+  border-radius: 8px;
+  padding: 8px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.role-btn.active-role {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
+}
+.role-name { font-size: 0.75rem; font-weight: 700; }
+.role-state { font-size: 0.65rem; color: var(--muted); }
+.status-pill { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+.status-alive { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+.status-down { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+.control-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.control-slider:last-child { margin-bottom: 0; }
+.slider-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.slider-val { font-weight: bold; color: #e5e7eb; }
+input[type="range"] {
+  width: 100%;
+  accent-color: #38bdf8;
+  height: 4px;
+  background: #1f2937;
+  border-radius: 2px;
+}
+.btn-row {
+  display: flex;
+  gap: 8px;
+}
+.btn {
+  flex: 1;
+  background: #1f2937;
+  border: 1px solid #374151;
+  color: #f3f4f6;
+  font-family: inherit;
+  font-size: 0.78rem;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.15s;
+  text-align: center;
+}
+.btn:hover { background: #374151; }
+.hotkeys-list {
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.kbd {
+  background: #1f2937;
+  color: #e5e7eb;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid #374151;
+  font-size: 0.7rem;
+}
+.ability-meter {
+  height: 8px;
+  width: 100%;
+  background: #0f172a;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 6px;
+  border: 1px solid #1e293b;
+}
+.ability-meter-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ec4899, #38bdf8);
+  width: 100%;
+  transition: width 0.1s linear;
+}
+</style>
+</head>
+<body>
+<header>
+  <h1><span>⚡ JFloorGame: Squad Runner</span></h1>
+  <span class="badge">proto-squad · Multi-Agent R&amp;D Variant</span>
+</header>
+
+<div class="layout-container">
+  <div class="game-viewport" id="viewport">
+    <canvas id="gameCanvas" width="440" height="600"></canvas>
+  </div>
+
+  <div class="sidebar">
+    <div class="card">
+      <div class="card-title">Squad Dynamic Architecture</div>
+      <div class="mode-toggle">
+        <button class="mode-btn active" id="btnModeFlock" onclick="setMode('flock')">🕊️ Flock Formation</button>
+        <button class="mode-btn" id="btnModeTag" onclick="setMode('tag')">🔄 Tag-Team Lead</button>
+      </div>
+      <div style="font-size:0.72rem; color:var(--muted); margin-top:8px;" id="modeDesc">
+        <strong>Flock Formation:</strong> 3 developers fly in a spring-linked echelon. 3 squad lives. Git commit pickups resurrect fallen squadmates!
+      </div>
+    </div>
+
+    <div class="card" id="rosterCard">
+      <div class="card-title">Squad Roster &amp; Status</div>
+      <div class="roster-grid">
+        <div class="role-btn active-role" id="cardFe" onclick="switchActiveRole('fe')">
+          <span style="font-size:1.1rem">🎨</span>
+          <span class="role-name" style="color:var(--accent-fe)">Frontend</span>
+          <span class="status-pill status-alive" id="statusFe">ACTIVE</span>
+          <span class="role-state" id="powerFe">Double Flap</span>
+        </div>
+        <div class="role-btn" id="cardBe" onclick="switchActiveRole('be')">
+          <span style="font-size:1.1rem">🛡️</span>
+          <span class="role-name" style="color:var(--accent-be)">Backend</span>
+          <span class="status-pill status-alive" id="statusBe">READY</span>
+          <span class="role-state" id="powerBe">DB Shield</span>
+        </div>
+        <div class="role-btn" id="cardOps" onclick="switchActiveRole('ops')">
+          <span style="font-size:1.1rem">☸️</span>
+          <span class="role-name" style="color:var(--accent-ops)">DevOps</span>
+          <span class="status-pill status-alive" id="statusOps">READY</span>
+          <span class="role-state" id="powerOps">CI Rollback</span>
+        </div>
+      </div>
+      <div style="margin-top:10px;">
+        <div class="slider-header">
+          <span>Active Super Power: <strong id="abilityLabel" style="color:#38bdf8">Double Jump Ready</strong></span>
+          <span id="abilityCd">READY [SHIFT]</span>
+        </div>
+        <div class="ability-meter"><div class="ability-meter-fill" id="abilityBar"></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Kinematic Presets &amp; Tuning</div>
+      <div class="control-slider">
+        <div class="slider-header"><span>Gravity ($g$):</span> <span class="slider-val" id="valGravity">1300 px/s²</span></div>
+        <input type="range" id="slGravity" min="800" max="2000" step="50" value="1300" oninput="updatePhysics()">
+      </div>
+      <div class="control-slider">
+        <div class="slider-header"><span>Flap Impulse ($v_0$):</span> <span class="slider-val" id="valJump">-390 px/s</span></div>
+        <input type="range" id="slJump" min="250" max="550" step="10" value="390" oninput="updatePhysics()">
+      </div>
+      <div class="control-slider">
+        <div class="slider-header"><span>Obstacle Gap:</span> <span class="slider-val" id="valGap">165 px</span></div>
+        <input type="range" id="slGap" min="130" max="230" step="5" value="165" oninput="updatePhysics()">
+      </div>
+      <div class="control-slider">
+        <div class="slider-header"><span>Scroll Velocity:</span> <span class="slider-val" id="valSpeed">170 px/s</span></div>
+        <input type="range" id="slSpeed" min="100" max="260" step="10" value="170" oninput="updatePhysics()">
+      </div>
+      <div class="btn-row" style="margin-top:8px;">
+        <button class="btn" onclick="toggleHitboxes()" id="btnHitbox">Show Hitboxes: OFF</button>
+        <button class="btn" onclick="toggleAudio()" id="btnMute">Audio: ON</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Controls &amp; Hotkeys</div>
+      <div class="hotkeys-list">
+        <div>• <kbd>SPACE</kbd> / <kbd>Click</kbd> / <kbd>Tap</kbd>: Flap squad impulse</div>
+        <div>• <kbd>SHIFT</kbd> / <kbd>F</kbd>: Activate role ability / burst</div>
+        <div>• <kbd>1</kbd> / <kbd>2</kbd> / <kbd>3</kbd>: Instant switch lead (Tag-Team)</div>
+        <div>• <kbd>R</kbd>: Instant restart test run</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="assets.js"></script>
+<script>
+// Standalone Squad Runner Game Engine
+(function() {
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+
+  // --- Fallback Assets if assets.js is omitted ---
+  const assets = window.SquadAssets || (function() {
+    let zzfxV = 0.25;
+    let zzfxX = null;
+    function zzfx(...t) {
+      if (zzfxV <= 0) return null;
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!zzfxX && AudioCtx) zzfxX = new AudioCtx();
+      if (zzfxX && zzfxX.state === 'suspended') zzfxX.resume();
+      if (!zzfxX) return null;
+      const R = 44100, b = 2 * Math.PI;
+      let q=t[0]||1, k=t[1]||.05, c=t[2]||220, e=t[3]||0, tt=t[4]||0, u=t[5]||.1, r=t[6]||0, F=t[7]||1, v=t[8]||0, z=t[9]||0, w=t[10]||0, A=t[11]||0, l=t[12]||0, B=t[13]||0, x=t[14]||0, G=t[15]||0, d=t[16]||0, y=t[17]||1, m=t[18]||0, C=t[19]||0;
+      let H = v *= 500 * b / R ** 2, I = (0 < x ? 1 : -1) * b / 4, D = c *= (1 + 2 * k * Math.random() - k) * b / R;
+      const Z = []; let g = 0, E = 0, a = 0, n = 1, J = 0, K = 0, f = 0, p, h;
+      e = 99 + R * e; m *= R; tt *= R; u *= R; d *= R; z *= 500 * b / R ** 3; x *= b / R; w *= b / R; A *= R; l = R * l | 0;
+      for (h = e + m + tt + u + d | 0; a < h; Z[a++] = f) {
+        ++K % (100 * G | 0) || (
+          f = r ? 1 < r ? 2 < r ? 3 < r ? Math.sin((g % b) ** 3) : Math.max(Math.min(Math.tan(g), 1), -1) : 1 - (2 * g / b % 2 + 2) % 2 : 1 - 4 * Math.abs(Math.round(g / b) - g / b) : Math.sin(g),
+          f = (l ? 1 - C + C * Math.sin(b * a / l) : 1) * (0 < f ? 1 : -1) * Math.abs(f) ** F * q * zzfxV * (a < e ? a / e : a < e + m ? 1 - (a - e) / m * (1 - y) : a < e + m + tt ? y : a < h - d ? (h - a - d) / u * y : 0),
+          f = d ? f / 2 + (d > a ? 0 : (a < h - d ? 1 : (h - a) / d) * Z[a - d | 0] / 2) : f
+        );
+        p = (c += v += z) * Math.sin(E * x - I); g += p - p * B * (1 - 1e9 * (Math.sin(a) + 1) % 2); E += p - p * B * (1 - 1e9 * (Math.sin(a) ** 2 + 1) % 2);
+        n && ++n > A && (c += w, D += w, n = 0); !l || ++J % l || (c = D, v = H, n = n || 1);
+      }
+      const buf = zzfxX.createBuffer(1, Z.length, R); buf.getChannelData(0).set(Z);
+      const src = zzfxX.createBufferSource(); src.buffer = buf; src.connect(zzfxX.destination); src.start();
+      return src;
+    }
+    return {
+      sounds: {
+        jump: () => zzfx(1.2, 0.05, 330, 0.01, 0.06, 0.09, 0, 1.4, -4.5),
+        score: () => zzfx(1.0, 0.01, 650, 0.01, 0.12, 0.18, 0, 0.8, 5.2),
+        nearMiss: () => zzfx(1.1, 0.08, 850, 0.01, 0.04, 0.08, 3, 2.1, 0),
+        pickup: () => zzfx(1.3, 0.05, 420, 0.03, 0.22, 0.28, 1, 1.1, 7.8),
+        revive: () => zzfx(1.2, 0.05, 520, 0.02, 0.14, 0.22, 0, 1.6, -2.1),
+        ability: () => zzfx(1.4, 0.04, 180, 0.05, 0.35, 0.45, 1, 1.2, -3.5),
+        crash: () => zzfx(1.5, 0.1, 140, 0.05, 0.28, 0.45, 4, 2.5, -0.8)
+      },
+      setVolume: (v) => { zzfxV = v; },
+      getVolume: () => zzfxV
+    };
+  })();
+
+  const SOUNDS = assets.sounds;
+
+  // --- SVG Sprite Graphics Initialization ---
+  const spriteImages = {};
+  const spriteKeys = ['dev_frontend', 'dev_backend', 'dev_devops', 'dev_crash', 'obs_crt_bsod', 'obs_crt_kernel', 'item_coffee', 'item_duck', 'item_commit'];
+  
+  if (assets.loadSpriteImages) {
+    assets.loadSpriteImages((imgs) => Object.assign(spriteImages, imgs));
+  } else {
+    // Generate programmatic colored placeholders if external images cannot load
+    spriteKeys.forEach(k => {
+      const cv = document.createElement('canvas');
+      cv.width = 44; cv.height = 44;
+      const c = cv.getContext('2d');
+      c.fillStyle = k.includes('frontend') ? '#ec4899' : k.includes('backend') ? '#3b82f6' : k.includes('devops') ? '#eab308' : '#64748b';
+      c.fillRect(4, 4, 36, 36);
+      const img = new Image();
+      img.src = cv.toDataURL();
+      spriteImages[k] = img;
+    });
+  }
+
+  // --- Kinematics & Tuning State ---
+  let cfg = {
+    gravity: 1300,
+    jumpImpulse: -390,
+    gap: 165,
+    speed: 170,
+    vMax: 600
+  };
+
+  let showHitboxes = false;
+  let audioEnabled = true;
+
+  // --- Squad Archetypes Matrix ---
+  const ROLES = {
+    fe: {
+      name: 'Frontend',
+      color: '#ec4899',
+      gravityMult: 0.82,    // Floaty
+      jumpMult: 0.92,
+      abilityName: 'Double Flap',
+      cooldown: 4.0,
+      sprite: 'dev_frontend'
+    },
+    be: {
+      name: 'Backend',
+      color: '#3b82f6',
+      gravityMult: 1.20,    // Heavy / dense
+      jumpMult: 1.10,
+      abilityName: 'DB Shield Bash',
+      cooldown: 7.0,
+      sprite: 'dev_backend'
+    },
+    ops: {
+      name: 'DevOps',
+      color: '#eab308',
+      gravityMult: 1.00,    // Balanced
+      jumpMult: 1.00,
+      abilityName: 'CI/CD Rollback',
+      cooldown: 8.0,
+      sprite: 'dev_devops'
+    }
+  };
+
+  // --- Game Engine State ---
+  let state = {
+    mode: 'flock',        // 'flock' or 'tag'
+    activeRole: 'fe',
+    gameState: 'ready',   // 'ready', 'playing', 'gameover'
+    score: 0,
+    highScore: 0,
+    multiplier: 1,
+    nearMissCount: 0,
+    streakTimer: 0,
+    time: 0,
+    
+    // Ability cooldowns & timers
+    abilityTimer: 0,       // active duration
+    abilityCooldown: 0,    // ready when <= 0
+    shieldActive: false,
+    
+    // Characters
+    squad: [],
+    
+    // Hazards & Pickups
+    obstacles: [],
+    pickups: [],
+    particles: [],
+    
+    // History buffer for DevOps CI/CD Rollback
+    history: []
+  };
+
+  function initSquad() {
+    if (state.mode === 'flock') {
+      state.squad = [
+        { id: 'fe', role: 'fe', x: 100, y: 280, vy: 0, alive: true, invuln: 0, width: 34, height: 34 },
+        { id: 'be', role: 'be', x: 62, y: 312, vy: 0, alive: true, invuln: 0, width: 34, height: 34 },
+        { id: 'ops', role: 'ops', x: 62, y: 248, vy: 0, alive: true, invuln: 0, width: 34, height: 34 }
+      ];
+    } else {
+      state.squad = [
+        { id: state.activeRole, role: state.activeRole, x: 100, y: 280, vy: 0, alive: true, invuln: 0, width: 34, height: 34 }
+      ];
+    }
+  }
+
+  function resetGame() {
+    state.score = 0;
+    state.multiplier = 1;
+    state.nearMissCount = 0;
+    state.streakTimer = 0;
+    state.abilityCooldown = 0;
+    state.abilityTimer = 0;
+    state.shieldActive = false;
+    state.obstacles = [];
+    state.pickups = [];
+    state.particles = [];
+    state.history = [];
+    initSquad();
+    state.gameState = 'ready';
+    updateHUD();
+  }
+
+  // --- Input Handlers ---
+  let isFlapHeld = false;
+
+  function doFlap() {
+    if (state.gameState === 'ready') {
+      state.gameState = 'playing';
+    }
+    if (state.gameState === 'gameover') {
+      resetGame();
+      state.gameState = 'playing';
+      return;
+    }
+
+    if (state.mode === 'flock') {
+      // Flock flap: Lead developer takes direct impulse, trailing squad members get elastic impulse
+      state.squad.forEach((dev, idx) => {
+        if (!dev.alive) return;
+        const roleData = ROLES[dev.role];
+        const impulse = cfg.jumpImpulse * roleData.jumpMult;
+        dev.vy = impulse;
+        spawnFlapParticles(dev.x, dev.y + 14, roleData.color);
+      });
+      if (audioEnabled) SOUNDS.jump();
+    } else {
+      // Tag-team lead flap
+      const lead = state.squad[0];
+      if (lead && lead.alive) {
+        const roleData = ROLES[lead.role];
+        lead.vy = cfg.jumpImpulse * roleData.jumpMult;
+        spawnFlapParticles(lead.x, lead.y + 14, roleData.color);
+        if (audioEnabled) SOUNDS.jump();
+      }
+    }
+  }
+
+  function activateSuperpower() {
+    if (state.gameState !== 'playing') return;
+    if (state.abilityCooldown > 0) return;
+
+    const currentRole = state.mode === 'flock' ? 'fe' : state.activeRole;
+
+    if (currentRole === 'fe') {
+      // Frontend: Double Flap upward air-dash recovery
+      const lead = state.squad[0];
+      if (lead) {
+        lead.vy = cfg.jumpImpulse * 1.35;
+        state.abilityCooldown = ROLES.fe.cooldown;
+        spawnBurstParticles(lead.x, lead.y, '#ec4899', 24);
+        if (audioEnabled) SOUNDS.ability();
+      }
+    } else if (currentRole === 'be') {
+      // Backend: Database Shield Bash (2.5s invulnerability barrier)
+      state.shieldActive = true;
+      state.abilityTimer = 2.5;
+      state.abilityCooldown = ROLES.be.cooldown;
+      const lead = state.squad[0];
+      if (lead) spawnBurstParticles(lead.x, lead.y, '#3b82f6', 20);
+      if (audioEnabled) SOUNDS.ability();
+    } else if (currentRole === 'ops') {
+      // DevOps: CI/CD Rollback (rewind past 1.2s of history)
+      if (state.history.length > 30) {
+        const rollbackSnapshot = state.history[Math.max(0, state.history.length - 45)];
+        const lead = state.squad[0];
+        if (lead && rollbackSnapshot) {
+          lead.y = rollbackSnapshot.y;
+          lead.vy = -100;
+          // Clear any obstacles nearby to prevent re-collision
+          state.obstacles.forEach(obs => {
+            if (Math.abs(obs.x - lead.x) < 70) obs.x -= 120;
+          });
+          spawnBurstParticles(lead.x, lead.y, '#eab308', 30);
+          state.abilityCooldown = ROLES.ops.cooldown;
+          if (audioEnabled) SOUNDS.revive();
+        }
+      }
+    }
+    updateHUD();
+  }
+
+  // --- Particles & Feedback System ---
+  function spawnFlapParticles(x, y, color) {
+    for (let i = 0; i < 4; i++) {
+      state.particles.push({
+        x: x + Math.random() * 8,
+        y: y + Math.random() * 4,
+        vx: -60 - Math.random() * 40,
+        vy: 20 + Math.random() * 30,
+        radius: 2 + Math.random() * 2,
+        life: 0.35,
+        maxLife: 0.35,
+        color: color
+      });
+    }
+  }
+
+  function spawnBurstParticles(x, y, color, count=16) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const spd = 60 + Math.random() * 120;
+      state.particles.push({
+        x: x + 16,
+        y: y + 16,
+        vx: Math.cos(angle) * spd,
+        vy: Math.sin(angle) * spd,
+        radius: 3 + Math.random() * 2.5,
+        life: 0.5,
+        maxLife: 0.5,
+        color: color
+      });
+    }
+  }
+
+  function spawnGrazeParticles(x, y) {
+    for (let i = 0; i < 6; i++) {
+      state.particles.push({
+        x: x,
+        y: y,
+        vx: (Math.random() - 0.5) * 80,
+        vy: (Math.random() - 0.5) * 80,
+        radius: 2,
+        life: 0.25,
+        maxLife: 0.25,
+        color: '#38bdf8'
+      });
+    }
+  }
+
+  // --- Obstacle & Pickup Generator ---
+  let obstacleTimer = 0;
+
+  function spawnObstacle() {
+    const minGapY = 90;
+    const maxGapY = 370;
+    const gapCenter = minGapY + Math.random() * (maxGapY - minGapY);
+    const gapHeight = cfg.gap;
+    
+    const obs = {
+      x: canvas.width + 30,
+      width: 58,
+      gapTop: gapCenter - gapHeight / 2,
+      gapBottom: gapCenter + gapHeight / 2,
+      scored: false,
+      nearMissed: false
+    };
+    state.obstacles.push(obs);
+
+    // Chance to spawn pickups in the gap
+    const rand = Math.random();
+    if (rand < 0.35) {
+      const itemType = rand < 0.15 ? 'commit' : rand < 0.25 ? 'duck' : 'coffee';
+      state.pickups.push({
+        x: obs.x + obs.width / 2,
+        y: gapCenter,
+        type: itemType,
+        radius: 12,
+        collected: false
+      });
+    }
+  }
+
+  // --- Physics & Collision Engine (Fixed 60 FPS Euler Integration) ---
+  function update(dt) {
+    state.time += dt;
+
+    // Cooldown management
+    if (state.abilityCooldown > 0) state.abilityCooldown = Math.max(0, state.abilityCooldown - dt);
+    if (state.abilityTimer > 0) {
+      state.abilityTimer = Math.max(0, state.abilityTimer - dt);
+      if (state.abilityTimer === 0) state.shieldActive = false;
+    }
+
+    // Streak timer decay
+    if (state.streakTimer > 0) {
+      state.streakTimer -= dt;
+      if (state.streakTimer <= 0) state.multiplier = 1;
+    }
+
+    if (state.gameState !== 'playing') {
+      // Gentle idle hover when ready
+      if (state.gameState === 'ready') {
+        state.squad.forEach((dev, idx) => {
+          dev.y = 280 + Math.sin(state.time * 3 + idx * 0.8) * 6;
+          dev.vy = 0;
+        });
+      }
+      return;
+    }
+
+    // Record position history for DevOps Rollback buffer
+    if (state.squad[0]) {
+      state.history.push({ x: state.squad[0].x, y: state.squad[0].y, time: state.time });
+      if (state.history.length > 90) state.history.shift(); // Keep ~1.5s
+    }
+
+    // 1. Update Squad Kinematics
+    if (state.mode === 'flock') {
+      const lead = state.squad[0];
+      // Lead Frontend dev physics
+      if (lead && lead.alive) {
+        lead.vy += cfg.gravity * ROLES.fe.gravityMult * dt;
+        if (lead.vy > cfg.vMax) lead.vy = cfg.vMax;
+        lead.y += lead.vy * dt;
+      }
+
+      // Spring-linked echelon formation for trailing squadmates
+      const targets = [
+        { x: 100, yOff: 0 },
+        { x: 65, yOff: 30 },
+        { x: 65, yOff: -30 }
+      ];
+
+      for (let i = 1; i < state.squad.length; i++) {
+        const member = state.squad[i];
+        if (!member.alive) continue;
+        const targetY = lead.alive ? (lead.y + targets[i].yOff) : member.y;
+        const dy = targetY - member.y;
+        const springK = 8.5;
+        const damping = 3.2;
+        member.vy += (dy * springK - member.vy * damping) * dt;
+        member.vy += cfg.gravity * ROLES[member.role].gravityMult * 0.4 * dt;
+        if (member.vy > cfg.vMax) member.vy = cfg.vMax;
+        member.y += member.vy * dt;
+      }
+    } else {
+      // Tag-Team lead physics
+      const lead = state.squad[0];
+      if (lead && lead.alive) {
+        const roleData = ROLES[state.activeRole];
+        let effGravity = cfg.gravity * roleData.gravityMult;
+        
+        // Frontend passive: Hover glide when flap is held
+        if (state.activeRole === 'fe' && isFlapHeld && lead.vy > 0) {
+          effGravity *= 0.35;
+        }
+
+        lead.vy += effGravity * dt;
+        if (lead.vy > cfg.vMax) lead.vy = cfg.vMax;
+        lead.y += lead.vy * dt;
+      }
+    }
+
+    // Boundary constraints: non-lethal ceiling clamp, floor death
+    let aliveCount = 0;
+    state.squad.forEach(dev => {
+      if (!dev.alive) return;
+      aliveCount++;
+      // Ceiling clamp bounce
+      if (dev.y < 0) {
+        dev.y = 0;
+        dev.vy = 40;
+        spawnFlapParticles(dev.x, 4, '#38bdf8');
+      }
+      // Floor "Production Down" fatality
+      if (dev.y > canvas.height - 44) {
+        dev.y = canvas.height - 44;
+        dev.alive = false;
+        spawnBurstParticles(dev.x, dev.y, '#ef4444', 20);
+        if (audioEnabled) SOUNDS.crash();
+      }
+    });
+
+    if (aliveCount === 0) {
+      gameOver();
+      return;
+    }
+
+    // 2. Obstacles spawning and update
+    obstacleTimer += dt;
+    const spawnInterval = 320 / cfg.speed;
+    if (obstacleTimer >= spawnInterval) {
+      obstacleTimer = 0;
+      spawnObstacle();
+    }
+
+    for (let i = state.obstacles.length - 1; i >= 0; i--) {
+      const obs = state.obstacles[i];
+      obs.x -= cfg.speed * dt;
+
+      // Score clearance ("PR Merged")
+      if (!obs.scored && obs.x + obs.width < state.squad[0].x) {
+        obs.scored = true;
+        const pts = 10 * state.multiplier;
+        state.score += pts;
+        if (state.score > state.highScore) state.highScore = state.score;
+        if (audioEnabled) SOUNDS.score();
+      }
+
+      // Check 3-Tier Hitbox Envelope
+      state.squad.forEach(dev => {
+        if (!dev.alive) return;
+
+        // Visual sprite bounds
+        const devLeft = dev.x + 7;
+        const devRight = dev.x + dev.width - 7;
+        const devTop = dev.y + 7;
+        const devBottom = dev.y + dev.height - 7;
+
+        // Outer Near-Miss Radar
+        const radarDist = (state.activeRole === 'ops' ? 32 : 20);
+        const nearX = devRight >= (obs.x - radarDist) && devLeft <= (obs.x + obs.width + radarDist);
+        const nearY = (devTop <= obs.gapTop + radarDist) || (devBottom >= obs.gapBottom - radarDist);
+
+        if (nearX && nearY && !obs.nearMissed && !obs.scored) {
+          obs.nearMissed = true;
+          state.nearMissCount++;
+          state.score += 5;
+          state.multiplier = Math.min(4, state.multiplier + 1);
+          state.streakTimer = 3.5;
+          spawnGrazeParticles(dev.x + dev.width / 2, dev.y + dev.height / 2);
+          if (audioEnabled) SOUNDS.nearMiss();
+        }
+
+        // Inner Active Hull & 8px Chamfered Corner Collision
+        const hitX = devRight > obs.x && devLeft < obs.x + obs.width;
+        const hitTop = devTop < obs.gapTop;
+        const hitBottom = devBottom > obs.gapBottom;
+
+        if (hitX && (hitTop || hitBottom)) {
+          // If Database Shield Bash is active, absorb the impact
+          if (state.shieldActive) {
+            spawnBurstParticles(dev.x + 16, dev.y + 16, '#38bdf8', 12);
+            obs.x -= 20; // push obstacle away
+            if (audioEnabled) SOUNDS.shieldHit();
+            return;
+          }
+
+          // Otherwise fatal clip for this squad member
+          dev.alive = false;
+          spawnBurstParticles(dev.x, dev.y, '#ef4444', 24);
+          if (audioEnabled) SOUNDS.crash();
+
+          // Check if entire squad is wiped out
+          const remaining = state.squad.filter(d => d.alive).length;
+          if (remaining === 0) {
+            gameOver();
+          }
+        }
+      });
+
+      // Cull off-screen obstacles
+      if (obs.x < -70) {
+        state.obstacles.splice(i, 1);
+      }
+    }
+
+    // 3. Pickups update
+    for (let i = state.pickups.length - 1; i >= 0; i--) {
+      const p = state.pickups[i];
+      p.x -= cfg.speed * dt;
+
+      // Pickup collection
+      state.squad.forEach(dev => {
+        if (!dev.alive) return;
+        const dx = (dev.x + dev.width / 2) - p.x;
+        const dy = (dev.y + dev.height / 2) - p.y;
+        if (Math.hypot(dx, dy) < p.radius + 14) {
+          collectPickup(p);
+          state.pickups.splice(i, 1);
+        }
+      });
+
+      if (p.x < -30) state.pickups.splice(i, 1);
+    }
+
+    // 4. Particles update
+    for (let i = state.particles.length - 1; i >= 0; i--) {
+      const pt = state.particles[i];
+      pt.life -= dt;
+      pt.x += pt.vx * dt;
+      pt.y += pt.vy * dt;
+      if (pt.life <= 0) state.particles.splice(i, 1);
+    }
+
+    updateHUD();
+  }
+
+  function collectPickup(p) {
+    if (p.type === 'coffee') {
+      state.score += 25;
+      spawnBurstParticles(p.x, p.y, '#f59e0b', 15);
+      if (audioEnabled) SOUNDS.pickup();
+    } else if (p.type === 'duck') {
+      state.shieldActive = true;
+      state.abilityTimer = 3.0;
+      spawnBurstParticles(p.x, p.y, '#facc15', 18);
+      if (audioEnabled) SOUNDS.pickup();
+    } else if (p.type === 'commit') {
+      state.score += 50;
+      // In flock mode: revive a fallen teammate
+      if (state.mode === 'flock') {
+        const fallen = state.squad.find(d => !d.alive);
+        if (fallen) {
+          fallen.alive = true;
+          fallen.y = state.squad[0].y;
+          fallen.vy = -120;
+          spawnBurstParticles(fallen.x, fallen.y, '#10b981', 20);
+          if (audioEnabled) SOUNDS.revive();
+        } else {
+          if (audioEnabled) SOUNDS.score();
+        }
+      } else {
+        // In tag-team mode: immediately reset ability cooldown
+        state.abilityCooldown = 0;
+        spawnBurstParticles(p.x, p.y, '#10b981', 20);
+        if (audioEnabled) SOUNDS.revive();
+      }
+    }
+  }
+
+  function gameOver() {
+    state.gameState = 'gameover';
+    updateHUD();
+  }
+
+  // --- Canvas Rendering Loop ---
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 1. Cyberpunk Subterranean Parallax Grid
+    ctx.fillStyle = '#050811';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Scrolling background vertical lines
+    ctx.strokeStyle = '#0d1527';
+    ctx.lineWidth = 1;
+    const gridOffset = (state.time * 25) % 30;
+    for (let x = -gridOffset; x < canvas.width; x += 30) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, canvas.height);
+      ctx.stroke();
+    }
+
+    // 2. Obstacles (CRT BSOD and Kernel Panic Monitors)
+    state.obstacles.forEach(obs => {
+      // Top Obstacle
+      drawObstacleStack(obs.x, 0, obs.width, obs.gapTop, true);
+      // Bottom Obstacle
+      drawObstacleStack(obs.x, obs.gapBottom, obs.width, canvas.height - obs.gapBottom, false);
+
+      // Hitbox visualizer
+      if (showHitboxes) {
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(obs.x, 0, obs.width, obs.gapTop);
+        ctx.strokeRect(obs.x, obs.gapBottom, obs.width, canvas.height - obs.gapBottom);
+
+        // Near-miss radar zone
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+        ctx.strokeRect(obs.x - 20, obs.gapTop - 20, obs.width + 40, (obs.gapBottom - obs.gapTop) + 40);
+      }
+    });
+
+    // 3. Pickups
+    state.pickups.forEach(p => {
+      const imgKey = 'item_' + p.type;
+      const img = spriteImages[imgKey];
+      if (img && img.complete) {
+        ctx.drawImage(img, p.x - 14, p.y - 14, 28, 28);
+      } else {
+        ctx.fillStyle = p.type === 'commit' ? '#10b981' : p.type === 'duck' ? '#facc15' : '#f59e0b';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+
+    // 4. Elastic Spring Tether in Flock Formation
+    if (state.mode === 'flock' && state.gameState === 'playing') {
+      const lead = state.squad[0];
+      if (lead && lead.alive) {
+        for (let i = 1; i < state.squad.length; i++) {
+          const member = state.squad[i];
+          if (!member.alive) continue;
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+          ctx.setLineDash([4, 4]);
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(lead.x + 12, lead.y + 16);
+          ctx.lineTo(member.x + 12, member.y + 16);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      }
+    }
+
+    // 5. Developers / Squad
+    state.squad.forEach(dev => {
+      if (!dev.alive) return;
+
+      const roleData = ROLES[dev.role];
+      const imgKey = roleData.sprite;
+      const img = spriteImages[imgKey];
+
+      ctx.save();
+      ctx.translate(dev.x + dev.width / 2, dev.y + dev.height / 2);
+
+      // Pitch angle based on vertical velocity
+      const pitch = Math.max(-0.5, Math.min(0.7, dev.vy / 450));
+      ctx.rotate(pitch);
+
+      if (img && img.complete) {
+        ctx.drawImage(img, -dev.width / 2, -dev.height / 2, dev.width, dev.height);
+      } else {
+        ctx.fillStyle = roleData.color;
+        ctx.fillRect(-dev.width / 2, -dev.height / 2, dev.width, dev.height);
+      }
+
+      // Shield Aura
+      if (state.shieldActive) {
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, dev.width * 0.75, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+
+      // Hitbox visualizer
+      if (showHitboxes) {
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(dev.x + 7, dev.y + 7, dev.width - 14, dev.height - 14);
+      }
+    });
+
+    // 6. Particles
+    state.particles.forEach(pt => {
+      ctx.fillStyle = pt.color;
+      ctx.globalAlpha = pt.life / pt.maxLife;
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1.0;
+
+    // 7. Ground / Production Floor
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, canvas.height - 14, canvas.width, 14);
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(0, canvas.height - 16, canvas.width, 2);
+
+    // 8. HUD Text & Notifications
+    drawHUD();
+
+    // 9. Overlay Screens
+    if (state.gameState === 'ready') {
+      ctx.fillStyle = 'rgba(9, 13, 22, 0.7)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = '700 18px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('⚡ TAP / SPACE TO FLAP', canvas.width / 2, canvas.height / 2 - 20);
+      ctx.font = '12px monospace';
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText(state.mode === 'flock' ? 'Mode: Tandem Flock Formation (3 Lives)' : 'Mode: Tag-Team Swapper (Lead: ' + ROLES[state.activeRole].name + ')', canvas.width / 2, canvas.height / 2 + 15);
+      ctx.fillText('[SHIFT]: Role Power | [1/2/3]: Hot-Swap', canvas.width / 2, canvas.height / 2 + 35);
+    } else if (state.gameState === 'gameover') {
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#ef4444';
+      ctx.font = '700 22px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('💥 PRODUCTION DOWN', canvas.width / 2, canvas.height / 2 - 30);
+      ctx.fillStyle = '#f3f4f6';
+      ctx.font = '16px monospace';
+      ctx.fillText('PR Score: ' + state.score, canvas.width / 2, canvas.height / 2 + 5);
+      ctx.font = '13px monospace';
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText('Near Misses: ' + state.nearMissCount + ' | Best: ' + state.highScore, canvas.width / 2, canvas.height / 2 + 30);
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillText('PRESS [SPACE] OR [R] TO RETRY', canvas.width / 2, canvas.height / 2 + 65);
+    }
+  }
+
+  function drawObstacleStack(x, y, w, h, isTop) {
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(x, y, w, h);
+
+    // Beveled CRT screen in the terminal
+    const screenH = Math.min(60, h - 10);
+    if (screenH > 20) {
+      const screenY = isTop ? (y + h - screenH - 4) : (y + 4);
+      ctx.fillStyle = isTop ? '#030712' : '#1d4ed8'; // Kernel panic top, BSOD bottom
+      ctx.fillRect(x + 4, screenY, w - 8, screenH);
+      ctx.fillStyle = isTop ? '#ef4444' : '#ffffff';
+      ctx.font = 'bold 9px monospace';
+      ctx.fillText(isTop ? '[KERNEL]' : ':( BSOD', x + 8, screenY + 14);
+    }
+  }
+
+  function drawHUD() {
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#f3f4f6';
+    ctx.font = 'bold 16px monospace';
+    ctx.fillText('PR: ' + state.score, 14, 28);
+
+    // Multiplier badge
+    if (state.multiplier > 1) {
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = 'bold 12px monospace';
+      ctx.fillText(state.multiplier + 'x STREAK', 90, 28);
+    }
+
+    // Squad lives indicator (Flock mode)
+    if (state.mode === 'flock') {
+      const aliveCount = state.squad.filter(d => d.alive).length;
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#34d399';
+      ctx.font = '12px monospace';
+      ctx.fillText('SQUAD: ' + '❤️'.repeat(aliveCount) + '🖤'.repeat(3 - aliveCount), canvas.width - 14, 28);
+    } else {
+      ctx.textAlign = 'right';
+      ctx.fillStyle = ROLES[state.activeRole].color;
+      ctx.font = 'bold 12px monospace';
+      ctx.fillText('LEAD: ' + ROLES[state.activeRole].name.toUpperCase(), canvas.width - 14, 28);
+    }
+  }
+
+  // --- External UI & Control Methods ---
+  window.setMode = function(m) {
+    state.mode = m;
+    document.getElementById('btnModeFlock').className = 'mode-btn' + (m === 'flock' ? ' active' : '');
+    document.getElementById('btnModeTag').className = 'mode-btn' + (m === 'tag' ? ' active' : '');
+    document.getElementById('modeDesc').innerHTML = m === 'flock'
+      ? '<strong>Flock Formation:</strong> 3 developers fly in a spring-linked echelon. 3 squad lives. Git commit pickups resurrect fallen squadmates!'
+      : '<strong>Tag-Team Lead:</strong> Hot-swap between Frontend, Backend, and DevOps in real time. Tactical cooldown abilities and dynamic role physics.';
+    resetGame();
+  };
+
+  window.switchActiveRole = function(role) {
+    state.activeRole = role;
+    ['fe', 'be', 'ops'].forEach(r => {
+      const btn = document.getElementById('card' + r.charAt(0).toUpperCase() + r.slice(1));
+      if (btn) btn.className = 'role-btn' + (r === role ? ' active-role' : '');
+    });
+    if (state.mode === 'tag') {
+      initSquad();
+    }
+    updateHUD();
+  };
+
+  window.updatePhysics = function() {
+    cfg.gravity = parseInt(document.getElementById('slGravity').value, 10);
+    cfg.jumpImpulse = -parseInt(document.getElementById('slJump').value, 10);
+    cfg.gap = parseInt(document.getElementById('slGap').value, 10);
+    cfg.speed = parseInt(document.getElementById('slSpeed').value, 10);
+
+    document.getElementById('valGravity').innerText = cfg.gravity + ' px/s²';
+    document.getElementById('valJump').innerText = cfg.jumpImpulse + ' px/s';
+    document.getElementById('valGap').innerText = cfg.gap + ' px';
+    document.getElementById('valSpeed').innerText = cfg.speed + ' px/s';
+  };
+
+  window.toggleHitboxes = function() {
+    showHitboxes = !showHitboxes;
+    document.getElementById('btnHitbox').innerText = 'Show Hitboxes: ' + (showHitboxes ? 'ON' : 'OFF');
+  };
+
+  window.toggleAudio = function() {
+    audioEnabled = !audioEnabled;
+    assets.setVolume(audioEnabled ? 0.25 : 0);
+    document.getElementById('btnMute').innerText = 'Audio: ' + (audioEnabled ? 'ON' : 'OFF');
+  };
+
+  function updateHUD() {
+    const role = state.mode === 'flock' ? 'fe' : state.activeRole;
+    const roleData = ROLES[role];
+    const bar = document.getElementById('abilityBar');
+    const cdLabel = document.getElementById('abilityCd');
+    const abLabel = document.getElementById('abilityLabel');
+
+    abLabel.innerText = roleData.abilityName;
+    abLabel.style.color = roleData.color;
+
+    if (state.abilityCooldown <= 0) {
+      bar.style.width = '100%';
+      cdLabel.innerText = 'READY [SHIFT]';
+      cdLabel.style.color = '#34d399';
+    } else {
+      const pct = (1 - state.abilityCooldown / roleData.cooldown) * 100;
+      bar.style.width = pct + '%';
+      cdLabel.innerText = state.abilityCooldown.toFixed(1) + 's';
+      cdLabel.style.color = '#94a3b8';
+    }
+
+    // Status badges on roster card
+    if (state.mode === 'flock') {
+      ['fe', 'be', 'ops'].forEach(r => {
+        const mem = state.squad.find(d => d.role === r);
+        const pill = document.getElementById('status' + r.charAt(0).toUpperCase() + r.slice(1));
+        if (pill) {
+          pill.innerText = mem && mem.alive ? 'ALIVE' : 'DOWN';
+          pill.className = 'status-pill ' + (mem && mem.alive ? 'status-alive' : 'status-down');
+        }
+      });
+    } else {
+      ['fe', 'be', 'ops'].forEach(r => {
+        const pill = document.getElementById('status' + r.charAt(0).toUpperCase() + r.slice(1));
+        if (pill) {
+          pill.innerText = r === state.activeRole ? 'ACTIVE' : 'STANDBY';
+          pill.className = 'status-pill ' + (r === state.activeRole ? 'status-alive' : 'status-alive');
+        }
+      });
+    }
+  }
+
+  // --- Keyboard & Touch Event Listeners ---
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') {
+      e.preventDefault();
+      isFlapHeld = true;
+      doFlap();
+    } else if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyF') {
+      e.preventDefault();
+      activateSuperpower();
+    } else if (e.code === 'Digit1') {
+      window.switchActiveRole('fe');
+    } else if (e.code === 'Digit2') {
+      window.switchActiveRole('be');
+    } else if (e.code === 'Digit3') {
+      window.switchActiveRole('ops');
+    } else if (e.code === 'KeyR') {
+      resetGame();
+    }
+  });
+
+  window.addEventListener('keyup', (e) => {
+    if (e.code === 'Space') isFlapHeld = false;
+  });
+
+  canvas.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    isFlapHeld = true;
+    doFlap();
+  });
+
+  canvas.addEventListener('mouseup', () => { isFlapHeld = false; });
+
+  canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    isFlapHeld = true;
+    doFlap();
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', () => { isFlapHeld = false; });
+
+  // --- Main Animation Loop (60 FPS fixed delta-time Euler integration) ---
+  let lastTime = performance.now();
+  function gameLoop(now) {
+    const dt = Math.min(0.05, (now - lastTime) / 1000);
+    lastTime = now;
+    update(dt);
+    draw();
+    requestAnimationFrame(gameLoop);
+  }
+
+  resetGame();
+  requestAnimationFrame(gameLoop);
+})();
+</script>
+</body>
+</html>
